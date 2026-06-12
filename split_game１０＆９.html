@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPLIT — 3分間チャレンジ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f14;color:#e8e4dc;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 16px 80px;}
+.screen{display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;}
+.screen.active{display:flex;}
+
+/* START */
+#start-screen{gap:24px;min-height:82vh;text-align:center;}
+.game-title{font-size:60px;font-weight:900;letter-spacing:0.22em;color:#f0e96a;text-shadow:0 0 50px rgba(240,233,106,0.28);}
+.game-tagline{font-size:14px;color:#555;letter-spacing:0.08em;}
+.mode-select{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;}
+.mode-btn{padding:20px 32px;border-radius:14px;border:2px solid #2a2a44;background:#141420;cursor:pointer;transition:border-color .15s,background .15s,transform .1s;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:190px;}
+.mode-btn:hover{border-color:#5555aa;background:#181828;transform:translateY(-2px);}
+.mode-btn.selected{border-color:#f0e96a;background:#1c1c10;box-shadow:0 0 22px rgba(240,233,106,.22);}
+.mode-icon{font-size:30px;}
+.mode-title{font-size:16px;font-weight:700;color:#e8e4dc;}
+.mode-desc{font-size:12px;color:#666;line-height:1.5;text-align:center;}
+.start-card{background:#14141e;border:1px solid #252540;border-radius:14px;padding:20px 28px;max-width:440px;line-height:1.85;font-size:13px;color:#777;text-align:left;}
+.start-card li{margin-left:18px;margin-bottom:4px;}
+.start-card strong{color:#b8b4ac;}
+.sound-setup{background:#14141e;border:1px solid #252540;border-radius:12px;padding:16px 24px;max-width:440px;width:100%;}
+.sound-setup-title{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#555;margin-bottom:10px;}
+.sound-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px;color:#888;}
+.sound-row:last-child{margin-bottom:0;}
+.sound-row label{min-width:110px;color:#999;}
+.sound-row input[type=file]{flex:1;font-size:11px;color:#666;}
+.sound-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:#888;margin-bottom:10px;}
+.sound-toggle input{accent-color:#f0e96a;width:16px;height:16px;cursor:pointer;}
+#start-btn{padding:15px 52px;font-size:17px;font-weight:700;letter-spacing:.12em;border-radius:12px;border:2px solid #f0e96a;background:rgba(240,233,106,.1);color:#f0e96a;cursor:pointer;transition:background .15s,box-shadow .15s,transform .1s;}
+#start-btn:hover{background:rgba(240,233,106,.2);box-shadow:0 0 24px rgba(240,233,106,.28);transform:scale(1.03);}
+
+/* GAME */
+#game-screen{gap:0;min-height:unset;}
+.hud{display:flex;align-items:stretch;margin-bottom:14px;background:#13131d;border:1px solid #222238;border-radius:14px;overflow:hidden;}
+.hud-block{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 28px;gap:2px;border-right:1px solid #222238;}
+.hud-block:last-child{border-right:none;}
+.hud-label{font-size:10px;color:#444;letter-spacing:.1em;text-transform:uppercase;}
+.hud-value{font-size:28px;font-weight:800;}
+#hud-time{color:#f0e96a;}
+#hud-time.urgent{color:#e05050;animation:blink .5s ease infinite alternate;}
+@keyframes blink{from{opacity:1;}to{opacity:.4;}}
+#hud-correct{color:#7ec850;}
+#hud-q{color:#666;font-size:20px!important;}
+#timer-bar-wrap{width:100%;max-width:860px;height:5px;background:#1a1a28;border-radius:3px;margin-bottom:18px;overflow:hidden;}
+#timer-bar{height:100%;background:#f0e96a;border-radius:3px;transition:width .95s linear,background .4s;width:100%;}
+#timer-bar.urgent{background:#e05050;}
+.game-area{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;max-width:1100px;}
+.panel{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.panel-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#555;}
+.mode-badge{font-size:11px;padding:3px 12px;border-radius:20px;background:#1c1c10;border:1px solid #3a3820;color:#b8a840;letter-spacing:.06em;}
+.mode-badge.nine{background:#101c1c;border-color:#203a38;color:#40b8a8;}
+#target-wrapper{display:inline-grid;gap:3px;}
+.target-cell{width:52px;height:52px;border-radius:6px;transition:background .18s,border-color .18s,box-shadow .25s;}
+.target-cell.empty{background:transparent;border:none;}
+.target-cell.filled{background:#2d2d44;border:1.5px solid #3a3a58;}
+.target-cell.placed-a{background:#7ec850;border:1.5px solid #9ee870;box-shadow:0 0 10px rgba(126,200,80,.5);}
+.target-cell.placed-b{background:#50c8c8;border:1.5px solid #70e8e8;box-shadow:0 0 10px rgba(80,200,200,.5);}
+.target-cell.placed-ov{background:#e0a030;border:1.5px solid #f0c050;box-shadow:0 0 10px rgba(224,160,48,.5);}
+.pieces-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-width:620px;}
+.piece-card{cursor:pointer;border-radius:10px;padding:10px 8px 7px;border:2px solid #252533;background:#16161f;transition:transform .1s,border-color .12s,box-shadow .12s;display:flex;flex-direction:column;align-items:center;gap:6px;user-select:none;}
+.piece-card:hover:not(.used):not(.locked){transform:translateY(-2px);border-color:#5555aa;box-shadow:0 4px 14px rgba(85,85,170,.28);}
+.piece-card.selected-a{border-color:#7ec850;box-shadow:0 0 14px rgba(126,200,80,.4);background:#181f12;}
+.piece-card.selected-b{border-color:#50c8c8;box-shadow:0 0 14px rgba(80,200,200,.4);background:#121f1f;}
+.piece-card.used,.piece-card.locked{opacity:.25;cursor:not-allowed;pointer-events:none;}
+.piece-mini{display:grid;gap:2px;}
+.pm-cell{width:16px;height:16px;border-radius:3px;}
+.pm-cell.on-a{background:#7ec850;}.pm-cell.on-b{background:#50c8c8;}.pm-cell.on-n{background:#5a8aff;}.pm-cell.off{background:transparent;}
+.piece-name{font-size:10px;color:#555;letter-spacing:.04em;}
+.status-bar{margin-top:12px;font-size:14px;color:#666;min-height:22px;text-align:center;letter-spacing:.03em;}
+.status-bar.hint-b{color:#70e8e8;}.status-bar.success{color:#f0e96a;font-weight:700;font-size:15px;}.status-bar.fail{color:#e05050;}
+.controls{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;justify-content:center;}
+button.ctrl{padding:9px 20px;border-radius:8px;border:1.5px solid #2e2e48;background:transparent;color:#a0a0c0;font-size:13px;cursor:pointer;transition:background .1s,border-color .1s,color .1s;}
+button.ctrl:hover{background:#1a1a2a;border-color:#5555aa;color:#e8e4dc;}
+button.ctrl.primary{border-color:#f0e96a;color:#f0e96a;background:rgba(240,233,106,.07);}
+button.ctrl.primary:hover{background:rgba(240,233,106,.15);}
+#answer-display{display:none;flex-direction:column;align-items:center;gap:10px;margin-top:18px;animation:fadeUp .35s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.answer-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#555;}
+#answer-wrapper{display:inline-grid;gap:3px;}
+.fit-cell{border-radius:7px;border:2px solid transparent;}
+.fit-cell.f-empty{background:#1c1c28;border-color:#282838;}.fit-cell.f-a{background:#7ec850;border-color:#9ee870;box-shadow:0 0 12px rgba(126,200,80,.55);}.fit-cell.f-b{background:#50c8c8;border-color:#70e8e8;box-shadow:0 0 12px rgba(80,200,200,.55);}.fit-cell.f-ov{background:#e0a030;border-color:#f0c050;box-shadow:0 0 12px rgba(224,160,48,.55);}
+.fit-cell.drop{animation:cellDrop .26s ease forwards;}
+@keyframes cellDrop{0%{transform:scale(.4) translateY(-12px);opacity:0;}65%{transform:scale(1.14) translateY(2px);opacity:1;}100%{transform:scale(1) translateY(0);}}
+
+/* RESULT */
+#result-screen{gap:26px;min-height:80vh;text-align:center;animation:fadeUp .5s ease;}
+.result-title{font-size:14px;color:#555;letter-spacing:.16em;text-transform:uppercase;}
+.result-score-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;background:#13131d;border:1px solid #252540;border-radius:20px;padding:32px 60px;}
+.result-big{font-size:84px;font-weight:900;color:#f0e96a;line-height:1;text-shadow:0 0 48px rgba(240,233,106,.32);}
+.result-unit{font-size:18px;color:#888;margin-top:-4px;}
+.result-stats{display:flex;gap:14px;font-size:14px;color:#555;}
+.result-stats span{color:#999;}
+.result-msg{font-size:15px;color:#aaa;max-width:360px;line-height:1.75;}
+.result-mode-badge{font-size:12px;color:#888;border:1px solid #2a2a3a;padding:3px 14px;border-radius:20px;}
+#retry-btn{padding:13px 46px;font-size:15px;font-weight:700;letter-spacing:.1em;border-radius:12px;border:2px solid #f0e96a;background:rgba(240,233,106,.1);color:#f0e96a;cursor:pointer;transition:background .15s,box-shadow .15s,transform .1s;}
+#retry-btn:hover{background:rgba(240,233,106,.2);box-shadow:0 0 22px rgba(240,233,106,.22);transform:scale(1.03);}
+#back-to-title{padding:10px 28px;font-size:13px;border-radius:10px;border:1.5px solid #2a2a44;background:transparent;color:#888;cursor:pointer;transition:border-color .1s,color .1s;}
+#back-to-title:hover{border-color:#5555aa;color:#c8c4bc;}
+.animation-overlay{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:999;}
+.confetti{position:absolute;border-radius:2px;animation:cffall linear forwards;}
+@keyframes cffall{0%{transform:translateY(-20px) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(540deg);opacity:0;}}
+</style>
+</head>
+<body>
+
+<!-- START -->
+<div id="start-screen" class="screen active">
+  <div><div class="game-title">SPLIT</div><div class="game-tagline">ペントミノパズル 3分間チャレンジ</div></div>
+  <div class="mode-select">
+    <div class="mode-btn selected" id="mode-btn-10" onclick="selectMode(10)">
+      <div class="mode-icon">🟩🟩</div>
+      <div class="mode-title">10マスモード</div>
+      <div class="mode-desc">5マス×2ピースで<br>10マスのシルエットを作ろう</div>
+    </div>
+    <div class="mode-btn" id="mode-btn-9" onclick="selectMode(9)">
+      <div class="mode-icon">🟦🟧</div>
+      <div class="mode-title">9マスモード</div>
+      <div class="mode-desc">5マス×2ピースを<strong style="color:#40b8a8">1マス重ねて</strong><br>9マスのシルエットを作ろう</div>
+    </div>
+  </div>
+  <div class="start-card"><ul>
+    <li><strong>制限時間は3分間</strong>。何問正解できるか挑戦しよう！</li>
+    <li>ピース一覧から2つ選んでお題の形にはめよう</li>
+    <li>正解すると約2秒後に自動で次の問題へ進むよ</li>
+    <li>不正解時は正解のはめ方が表示されるよ</li>
+  </ul></div>
+  <div class="sound-setup">
+    <div class="sound-setup-title">🔊 サウンド設定（任意）</div>
+    <div class="sound-toggle"><input type="checkbox" id="sound-enabled" checked><label for="sound-enabled" style="color:#aaa;font-size:13px;">サウンドを使用する</label></div>
+    <div class="sound-row"><label>✅ 正解音</label><input type="file" id="snd-correct" accept="audio/*"></div>
+    <div class="sound-row"><label>❌ 不正解音</label><input type="file" id="snd-wrong" accept="audio/*"></div>
+    <div class="sound-row"><label>⏱ カウントダウン</label><input type="file" id="snd-tick" accept="audio/*"></div>
+  </div>
+  <button id="start-btn" onclick="startGame()">▶ スタート</button>
+</div>
+
+<!-- GAME -->
+<div id="game-screen" class="screen">
+  <div class="hud">
+    <div class="hud-block"><div class="hud-label">のこり時間</div><div class="hud-value" id="hud-time">3:00</div></div>
+    <div class="hud-block"><div class="hud-label">正解数</div><div class="hud-value" id="hud-correct">0</div></div>
+    <div class="hud-block"><div class="hud-label">問題</div><div class="hud-value" id="hud-q">Q1</div></div>
+  </div>
+  <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+  <div class="game-area">
+    <div class="panel">
+      <div class="panel-label">お題の形</div>
+      <div id="mode-badge-game" class="mode-badge">10マス</div>
+      <div id="target-wrapper"></div>
+    </div>
+    <div class="panel" style="gap:14px;">
+      <div class="panel-label">ピース一覧 — 2つ選択</div>
+      <div class="pieces-grid" id="pieces-grid"></div>
+    </div>
+  </div>
+  <div id="answer-display">
+    <div class="answer-label" id="answer-label">はめ込み</div>
+    <div id="answer-wrapper"></div>
+  </div>
+  <div class="status-bar" id="status-bar">ピースAを選んでください</div>
+  <div class="controls">
+    <button class="ctrl" id="reset-btn" onclick="resetSelection()">選択リセット</button>
+    <button class="ctrl primary" id="next-btn" onclick="nextNow()" style="display:none">次へ →</button>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="result-screen" class="screen">
+  <div class="result-title">Time Up!</div>
+  <div class="result-score-wrap">
+    <div class="result-big" id="res-correct">0</div>
+    <div class="result-unit">問正解</div>
+  </div>
+  <div class="result-stats">挑戦数 <span id="res-total">0</span> 問 ／ 正答率 <span id="res-rate">0</span>%</div>
+  <div class="result-mode-badge" id="res-mode-badge">10マスモード</div>
+  <div class="result-msg" id="res-msg"></div>
+  <button id="retry-btn" onclick="retryGame()">もう一度挑戦</button>
+  <button id="back-to-title" onclick="goTitle()">タイトルへ戻る</button>
+</div>
+
+<div class="animation-overlay" id="overlay"></div>
+
+<script>
+// ===== PIECES =====
+const PIECES={
+  I:[[0,0],[0,1],[0,2],[0,3],[0,4]],
+  L:[[0,0],[1,0],[2,0],[3,0],[3,1]],
+  J:[[0,1],[1,1],[2,1],[3,0],[3,1]],
+  T:[[0,0],[0,1],[0,2],[1,1],[2,1]],
+  S:[[0,0],[0,1],[1,1],[1,2],[2,2]],
+  Z:[[0,1],[0,2],[1,0],[1,1],[2,0]],
+  P:[[0,0],[0,1],[1,0],[1,1],[2,0]],
+  F:[[0,1],[0,2],[1,0],[1,1],[2,1]],
+  Y:[[0,1],[1,0],[1,1],[2,1],[3,1]],
+  N:[[0,0],[1,0],[1,1],[2,1],[3,1]],
+  U:[[0,0],[0,2],[1,0],[1,1],[1,2]],
+  V:[[0,0],[1,0],[2,0],[2,1],[2,2]],
+  W:[[0,0],[1,0],[1,1],[2,1],[2,2]],
+  X:[[0,1],[1,0],[1,1],[1,2],[2,1]],
+};
+function rot(c){return nrm(c.map(([r,cc])=>[cc,-r]));}
+function ref(c){return nrm(c.map(([r,cc])=>[r,-cc]));}
+function nrm(c){const mr=Math.min(...c.map(([r])=>r)),mc=Math.min(...c.map(([,cc])=>cc));return c.map(([r,cc])=>[r-mr,cc-mc]);}
+function oris(cells){const s=new Set(),res=[];let c=nrm(cells);for(let f=0;f<2;f++){for(let r=0;r<4;r++){const k=c.map(([a,b])=>a+','+b).sort().join('|');if(!s.has(k)){s.add(k);res.push(c);}c=rot(c);}c=ref(c);}return res;}
+
+// Solver: try all orientations and placements
+function solve10(shapeArr, nA, nB){
+  const shapeSet=new Set(shapeArr.map(([r,c])=>r+','+c));
+  for(const oA of oris(PIECES[nA])){
+    for(const [ar,ac] of shapeArr){
+      const dr=ar-oA[0][0], dc=ac-oA[0][1];
+      const pA=oA.map(([r,c])=>[r+dr,c+dc]);
+      if(!pA.every(([r,c])=>shapeSet.has(r+','+c)))continue;
+      const remSet=new Set(shapeSet); pA.forEach(([r,c])=>remSet.delete(r+','+c));
+      const remArr=[...remSet].map(k=>k.split(',').map(Number));
+      for(const oB of oris(PIECES[nB])){
+        for(const [br,bc] of remArr){
+          const dr2=br-oB[0][0], dc2=bc-oB[0][1];
+          const pB=oB.map(([r,c])=>[r+dr2,c+dc2]);
+          if(pB.every(([r,c])=>remSet.has(r+','+c)))
+            return {placeA:pA,placeB:pB,overlap:null};
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function solve9(shapeArr, nA, nB){
+  const shapeSet=new Set(shapeArr.map(([r,c])=>r+','+c));
+  for(const oA of oris(PIECES[nA])){
+    for(const [ar,ac] of shapeArr){
+      const dr=ar-oA[0][0], dc=ac-oA[0][1];
+      const pA=oA.map(([r,c])=>[r+dr,c+dc]);
+      if(!pA.every(([r,c])=>shapeSet.has(r+','+c)))continue;
+      const pAset=new Set(pA.map(([r,c])=>r+','+c));
+      for(const oB of oris(PIECES[nB])){
+        for(const [br,bc] of shapeArr){
+          const dr2=br-oB[0][0], dc2=bc-oB[0][1];
+          const pB=oB.map(([r,c])=>[r+dr2,c+dc2]);
+          if(!pB.every(([r,c])=>shapeSet.has(r+','+c)))continue;
+          const ovs=pA.filter(([r,c])=>new Set(pB.map(([a,b])=>a+','+b)).has(r+','+c));
+          if(ovs.length!==1)continue;
+          const union=new Set([...pAset,...pB.map(([r,c])=>r+','+c)]);
+          if(union.size===9&&[...shapeSet].every(k=>union.has(k)))
+            return {placeA:pA,placeB:pB,overlap:ovs[0]};
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function solve(shapeArr, nA, nB, mode){
+  return mode===10 ? solve10(shapeArr,nA,nB) : solve9(shapeArr,nA,nB);
+}
+
+// ===== LEVELS =====
+// All verified by Python solver
+const LEVELS_10=[
+  {cols:5,rows:2,shape:[[0,0],[0,1],[0,2],[0,3],[0,4],[1,0],[1,1],[1,2],[1,3],[1,4]],pA:'I',pB:'I',pool:['I','I','L','J','T','S','Z','P','F','Y']},
+  {cols:4,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[1,0],[1,1],[1,2],[1,3],[2,0],[2,1]],pA:'L',pB:'P',pool:['L','P','I','J','T','S','Z','F','Y','N']},
+  {cols:4,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[1,0],[1,1],[1,2],[1,3],[2,2],[2,3]],pA:'L',pB:'P',pool:['L','P','I','J','T','S','Z','F','Y','N']},
+  {cols:4,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[1,1],[1,2],[1,3],[2,1],[2,2],[2,3]],pA:'L',pB:'P',pool:['L','P','I','J','T','S','Z','F','Y','N']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[1,0],[1,1],[1,2],[1,3],[2,0],[2,1],[2,2],[2,3]],pA:'L',pB:'P',pool:['L','P','I','J','T','S','Z','F','Y','N']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2],[3,0]],pA:'L',pB:'P',pool:['L','P','I','J','T','S','Z','F','Y','N']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[0,2],[0,3],[1,0],[1,1],[2,0],[2,1],[3,0],[3,1]],pA:'L',pB:'P',pool:['L','P','I','J','T','S','Z','F','Y','N']},
+  {cols:4,rows:4,shape:[[0,1],[0,2],[1,0],[1,1],[1,2],[1,3],[2,1],[2,2],[3,1],[3,2]],pA:'Y',pB:'Y',pool:['Y','Y','I','L','J','T','S','Z','P','F']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[0,2],[0,3],[1,0],[1,3],[2,0],[2,1],[2,2],[2,3]],pA:'L',pB:'L',pool:['L','L','I','J','T','S','Z','P','F','Y']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[0,2],[0,3],[1,2],[1,3],[2,0],[2,1],[2,2],[2,3]],pA:'L',pB:'Y',pool:['L','Y','I','J','T','S','Z','P','F','N']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[0,2],[0,3],[1,0],[1,1],[1,2],[1,3],[2,0],[2,3]],pA:'T',pB:'V',pool:['T','V','I','L','J','S','Z','P','F','Y']},
+  {cols:5,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[0,4],[1,0],[1,1],[1,2],[2,0],[2,1]],pA:'I',pB:'P',pool:['I','P','L','J','T','S','Z','F','Y','N']},
+  {cols:5,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[0,4],[1,0],[1,1],[2,0],[2,1],[2,2]],pA:'I',pB:'P',pool:['I','P','L','J','T','S','Z','F','Y','N']},
+  {cols:5,rows:3,shape:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[1,3],[1,4],[2,3],[2,4]],pA:'P',pB:'P',pool:['P','P','I','L','J','T','S','Z','F','Y']},
+  {cols:5,rows:4,shape:[[0,0],[0,1],[1,0],[1,1],[2,0],[2,1],[2,2],[2,3],[3,2],[3,3]],pA:'P',pB:'P',pool:['P','P','I','L','J','T','S','Z','F','Y']},
+  {cols:5,rows:4,shape:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,1],[2,2],[3,1],[3,2]],pA:'L',pB:'P',pool:['L','P','I','J','T','S','Z','F','Y','N']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[0,2],[1,2],[1,3],[2,1],[2,2],[2,3],[3,0],[3,1]],pA:'N',pB:'N',pool:['N','N','I','L','J','T','S','Z','P','F']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[1,0],[1,1],[1,2],[1,3],[2,2],[2,3],[3,2],[3,3]],pA:'P',pB:'P',pool:['P','P','I','L','J','T','S','Z','F','Y']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[0,2],[0,3],[1,1],[1,2],[2,1],[2,2],[3,1],[3,2]],pA:'L',pB:'L',pool:['L','L','I','J','T','S','Z','P','F','Y']},
+];
+
+const LEVELS_9=[
+  {cols:5,rows:2,shape:[[0,0],[0,1],[0,2],[0,3],[0,4],[1,0],[1,1],[1,2],[1,3]],pA:'I',pB:'L',pool:['I','L','J','T','S','Z','P','F','Y','N']},
+  {cols:5,rows:2,shape:[[0,0],[0,1],[0,2],[0,3],[0,4],[1,1],[1,2],[1,3],[1,4]],pA:'I',pB:'L',pool:['I','L','J','T','S','Z','P','F','Y','N']},
+  {cols:4,rows:3,shape:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[1,3],[2,1],[2,2]],pA:'L',pB:'U',pool:['L','U','I','J','T','S','Z','P','F','Y']},
+  {cols:4,rows:3,shape:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]],pA:'T',pB:'U',pool:['T','U','I','L','J','S','Z','P','F','Y']},
+  {cols:4,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[1,0],[1,1],[1,2],[2,0],[2,1]],pA:'L',pB:'S',pool:['L','S','I','J','T','Z','P','F','Y','N']},
+  {cols:4,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[1,1],[1,2],[1,3],[2,1],[2,2]],pA:'L',pB:'P',pool:['L','P','I','J','T','S','Z','F','Y','N']},
+  {cols:5,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[1,0],[1,1],[1,2],[1,3],[2,2]],pA:'L',pB:'T',pool:['L','T','I','J','S','Z','P','F','Y','N']},
+  {cols:5,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[0,4],[1,1],[1,2],[1,3],[2,2]],pA:'I',pB:'F',pool:['I','F','L','J','T','S','Z','P','Y','N']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[1,0],[1,1],[1,2],[1,3],[2,2],[2,3],[3,2]],pA:'P',pB:'P',pool:['P','P','I','L','J','T','S','Z','F','Y']},
+  {cols:4,rows:4,shape:[[0,1],[0,2],[1,0],[1,1],[1,2],[1,3],[2,1],[2,2],[3,1]],pA:'L',pB:'Y',pool:['L','Y','I','J','T','S','Z','P','F','N']},
+  {cols:5,rows:3,shape:[[0,2],[1,0],[1,1],[1,2],[1,3],[1,4],[2,1],[2,2],[2,3]],pA:'I',pB:'T',pool:['I','T','L','J','S','Z','P','F','Y','N']},
+  {cols:5,rows:3,shape:[[0,0],[0,1],[0,2],[1,2],[1,3],[1,4],[2,1],[2,2],[2,3]],pA:'N',pB:'N',pool:['N','N','I','L','J','T','S','Z','P','F']},
+  {cols:4,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[1,0],[1,1],[2,0],[2,1],[2,2]],pA:'L',pB:'T',pool:['L','T','I','J','S','Z','P','F','Y','N']},
+  {cols:4,rows:4,shape:[[0,0],[0,1],[1,0],[1,1],[1,2],[2,1],[2,2],[3,1],[3,2]],pA:'L',pB:'V',pool:['L','V','I','J','T','S','Z','P','F','Y']},
+  {cols:5,rows:3,shape:[[0,0],[0,1],[0,2],[0,3],[1,0],[1,1],[1,2],[1,3],[2,0]],pA:'L',pB:'L',pool:['L','L','I','J','T','S','Z','P','F','Y']},
+  {cols:4,rows:3,shape:[[0,0],[0,1],[1,0],[1,1],[1,2],[1,3],[2,1],[2,2],[2,3]],pA:'L',pB:'V',pool:['L','V','I','J','T','S','Z','P','F','Y']},
+];
+
+function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
+
+// ===== SOUND =====
+let sndOK=null,sndNG=null,sndTick=null,sndOn=true,tickDone=false;
+function loadSounds(){
+  sndOn=document.getElementById('sound-enabled').checked;
+  const f1=document.getElementById('snd-correct').files[0];
+  const f2=document.getElementById('snd-wrong').files[0];
+  const f3=document.getElementById('snd-tick').files[0];
+  if(f1){sndOK=new Audio(URL.createObjectURL(f1));}
+  if(f2){sndNG=new Audio(URL.createObjectURL(f2));}
+  if(f3){sndTick=new Audio(URL.createObjectURL(f3));}
+}
+function playSound(s){if(!sndOn||!s)return;try{s.currentTime=0;s.play().catch(()=>{});}catch(e){}}
+
+// ===== GAME STATE =====
+const TOTAL=180;
+let ticker=null, advTmr=null;
+let secsLeft=TOTAL, running=false;
+let mode=10;
+let levels=[], idx=0, correct=0, attempted=0;
+let selA=null, selB=null, locked=false;
+
+function getLvl(){return levels[idx%levels.length];}
+
+// ===== MODE SELECT =====
+function selectMode(m){
+  mode=m;
+  document.getElementById('mode-btn-10').classList.toggle('selected',m===10);
+  document.getElementById('mode-btn-9').classList.toggle('selected',m===9);
+}
+
+// ===== SCREEN =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ===== START / STOP =====
+function startGame(){
+  loadSounds();
+  levels=shuffle(mode===10?LEVELS_10:LEVELS_9);
+  idx=0;correct=0;attempted=0;tickDone=false;
+  secsLeft=TOTAL;running=true;
+  showScreen('game-screen');
+  const b=document.getElementById('mode-badge-game');
+  b.textContent=mode===10?'10マス':'9マス (1マス重ね)';
+  b.className='mode-badge'+(mode===9?' nine':'');
+  newRound();
+  updateHUD();updateBar();
+  ticker=setInterval(()=>{
+    secsLeft--;updateHUD();updateBar();
+    if(secsLeft===10&&!tickDone){tickDone=true;playSound(sndTick);}
+    if(secsLeft<=0){secsLeft=0;endGame();}
+  },1000);
+}
+
+function endGame(){
+  running=false;clearInterval(ticker);
+  if(advTmr){clearTimeout(advTmr);advTmr=null;}
+  setTimeout(()=>{
+    showScreen('result-screen');
+    document.getElementById('res-correct').textContent=correct;
+    document.getElementById('res-total').textContent=attempted;
+    document.getElementById('res-rate').textContent=attempted>0?Math.round(correct/attempted*100):0;
+    document.getElementById('res-mode-badge').textContent=mode===10?'10マスモード':'9マスモード';
+    document.getElementById('res-msg').textContent=msg(correct);
+    if(correct>=5)confetti();
+  },400);
+}
+function msg(n){
+  if(n===0)return 'まずはルールに慣れよう！次は必ず解けるはず。';
+  if(n<=2)return 'いいスタート！もう少し速く選べれば伸びるよ。';
+  if(n<=5)return '落ち着いて考えれば正解できてる証拠。もう一回！';
+  if(n<=9)return 'なかなかの実力！10問超えを目指そう！';
+  if(n<=14)return 'すごい！ピースの形が頭に入ってきた感じがするね。';
+  return '完璧！ペントミノマスター！';
+}
+function retryGame(){showScreen('game-screen');startGame();}
+function goTitle(){running=false;clearInterval(ticker);if(advTmr){clearTimeout(advTmr);advTmr=null;}showScreen('start-screen');}
+
+// ===== HUD =====
+function updateHUD(){
+  const m=Math.floor(secsLeft/60),s=secsLeft%60;
+  const el=document.getElementById('hud-time');
+  el.textContent=m+':'+(s<10?'0':'')+s;
+  el.classList.toggle('urgent',secsLeft<=10);
+  document.getElementById('hud-correct').textContent=correct;
+  document.getElementById('hud-q').textContent='Q'+(idx+1);
+}
+function updateBar(){
+  const bar=document.getElementById('timer-bar');
+  bar.style.width=(secsLeft/TOTAL*100)+'%';
+  bar.classList.toggle('urgent',secsLeft<=10);
+}
+
+// ===== ROUND =====
+function newRound(){
+  selA=null;selB=null;locked=false;
+  document.getElementById('answer-display').style.display='none';
+  document.getElementById('next-btn').style.display='none';
+  document.getElementById('reset-btn').style.display='inline-block';
+  setStatus('ピースAを選んでください','');
+  buildTarget();buildPieces();
+}
+function schedNext(ms){
+  document.getElementById('next-btn').style.display='inline-block';
+  document.getElementById('reset-btn').style.display='none';
+  advTmr=setTimeout(()=>{if(running)nextNow();},ms);
+}
+function nextNow(){
+  if(advTmr){clearTimeout(advTmr);advTmr=null;}
+  idx++;updateHUD();newRound();
+}
+
+// ===== BUILD GRID =====
+function buildTarget(){
+  const lvl=getLvl();
+  const w=document.getElementById('target-wrapper');
+  w.innerHTML='';
+  w.style.gridTemplateColumns='repeat('+lvl.cols+',52px)';
+  w.style.gridTemplateRows='repeat('+lvl.rows+',52px)';
+  const S=new Set(lvl.shape.map(([r,c])=>r+','+c));
+  for(let r=0;r<lvl.rows;r++)for(let c=0;c<lvl.cols;c++){
+    const el=document.createElement('div');
+    el.className='target-cell '+(S.has(r+','+c)?'filled':'empty');
+    el.id='tc-'+r+'-'+c;
+    w.appendChild(el);
+  }
+}
+
+// ===== BUILD PIECES =====
+function buildPieces(){
+  const lvl=getLvl();
+  const g=document.getElementById('pieces-grid');
+  g.innerHTML='';
+  for(const nm of shuffle(lvl.pool)){
+    const cells=nrm(PIECES[nm]);
+    const maxR=Math.max(...cells.map(([r])=>r));
+    const maxC=Math.max(...cells.map(([,c])=>c));
+    const card=document.createElement('div');
+    card.className='piece-card';card.dataset.nm=nm;
+    card.onclick=()=>pick(card);
+    const mini=document.createElement('div');
+    mini.className='piece-mini';
+    mini.style.gridTemplateColumns='repeat('+(maxC+1)+',16px)';
+    mini.style.gridTemplateRows='repeat('+(maxR+1)+',16px)';
+    const cs=new Set(cells.map(([r,c])=>r+','+c));
+    for(let r=0;r<=maxR;r++)for(let c=0;c<=maxC;c++){
+      const px=document.createElement('div');
+      px.className='pm-cell '+(cs.has(r+','+c)?'on-n':'off');
+      mini.appendChild(px);
+    }
+    const lbl=document.createElement('div');lbl.className='piece-name';lbl.textContent=nm;
+    card.appendChild(mini);card.appendChild(lbl);g.appendChild(card);
+  }
+}
+
+// ===== PICK =====
+// selA / selB are now card DOM elements (not names)
+// piece name is read via card.dataset.nm when needed
+
+function pick(card){
+  if(locked||!running)return;
+
+  if(!selA){
+    // Select as A
+    selA=card;
+    applyCardStyle(card,'selected-a','on-a');
+    setStatus('ピースBを選んでください（もう一度クリックで解除）','hint-b');
+    return;
+  }
+  if(card===selA){
+    // Deselect A
+    applyCardStyle(selA,null,'on-n');
+    selA=null;
+    setStatus('ピースAを選んでください','');
+    return;
+  }
+  if(!selB){
+    // Select as B and check
+    selB=card;
+    applyCardStyle(card,'selected-b','on-b');
+    check();
+    return;
+  }
+  // Replace B
+  applyCardStyle(selB,null,'on-n');
+  selB=card;
+  applyCardStyle(card,'selected-b','on-b');
+  check();
+}
+
+function applyCardStyle(card,cls,pxCls){
+  card.classList.remove('selected-a','selected-b');
+  if(cls)card.classList.add(cls);
+  card.querySelectorAll('.pm-cell').forEach(px=>{
+    if(!px.classList.contains('off'))px.className='pm-cell '+pxCls;
+  });
+}
+
+// ===== CHECK =====
+function check(){
+  const lvl=getLvl();
+  const nmA=selA.dataset.nm, nmB=selB.dataset.nm;
+  attempted++;
+  const res=solve(lvl.shape,nmA,nmB,mode);
+  if(res){
+    locked=true;
+    correct++;
+    document.getElementById('hud-correct').textContent=correct;
+    playSound(sndOK);
+    setStatus('✓ 正解！','success');
+    paintTarget(res);
+    showAnim(res,'はめ込み');
+    schedNext(2200);
+  } else {
+    locked=true;
+    playSound(sndNG);
+    setStatus('✗ 不正解。正解を確認してください','fail');
+    const sol=solve(lvl.shape,lvl.pA,lvl.pB,mode);
+    if(sol){paintTarget(sol);showAnim(sol,'正解のはめ込み');}
+    document.querySelectorAll('.piece-card').forEach(c=>c.classList.add('used'));
+    schedNext(3500);
+  }
+}
+
+function paintTarget(sol){
+  const lvl=getLvl();
+  const ovKey=sol.overlap?sol.overlap[0]+','+sol.overlap[1]:null;
+  sol.placeA.forEach(([r,c])=>{
+    const el=document.getElementById('tc-'+r+'-'+c);
+    if(el)el.className='target-cell '+(ovKey===r+','+c?'placed-ov':'placed-a');
+  });
+  sol.placeB.forEach(([r,c])=>{
+    const el=document.getElementById('tc-'+r+'-'+c);
+    if(el&&!el.className.includes('placed-ov'))el.className='target-cell placed-b';
+  });
+}
+
+function showAnim(sol,label){
+  const lvl=getLvl();
+  const disp=document.getElementById('answer-display');
+  const wrap=document.getElementById('answer-wrapper');
+  document.getElementById('answer-label').textContent=label+(mode===9?' (オレンジ=重なり)':'');
+  disp.style.display='flex';wrap.innerHTML='';
+  wrap.style.gridTemplateColumns='repeat('+lvl.cols+',52px)';
+  wrap.style.gridTemplateRows='repeat('+lvl.rows+',52px)';
+  const S=new Set(lvl.shape.map(([r,c])=>r+','+c));
+  const cells={};
+  for(let r=0;r<lvl.rows;r++)for(let c=0;c<lvl.cols;c++){
+    const el=document.createElement('div');
+    const k=r+','+c;
+    el.style.cssText='width:52px;height:52px;';
+    el.className='fit-cell '+(S.has(k)?'f-empty':'');
+    if(!S.has(k))el.style.background='transparent';
+    wrap.appendChild(el);cells[k]=el;
+  }
+  const ovKey=sol.overlap?sol.overlap[0]+','+sol.overlap[1]:null;
+  let d=80;
+  sol.placeA.forEach(([r,c])=>{
+    const k=r+','+c;
+    setTimeout(()=>{if(cells[k]){cells[k].className='fit-cell '+(ovKey===k?'f-ov':'f-a')+' drop';setTimeout(()=>cells[k].classList.remove('drop'),260);}},d);
+    d+=55;
+  });
+  d+=120;
+  sol.placeB.forEach(([r,c])=>{
+    const k=r+','+c;
+    setTimeout(()=>{if(cells[k]&&!cells[k].className.includes('f-ov')){cells[k].className='fit-cell f-b drop';setTimeout(()=>cells[k].classList.remove('drop'),260);}},d);
+    d+=55;
+  });
+  setTimeout(()=>{Object.values(cells).forEach(el=>{el.style.transform='scale(1.06)';setTimeout(()=>el.style.transform='',150);});},d+120);
+}
+
+// ===== CONTROLS =====
+function setStatus(t,c){const b=document.getElementById('status-bar');b.textContent=t;b.className='status-bar '+(c||'');}
+function resetSelection(){
+  if(locked||!running)return;
+  if(selA){applyCardStyle(selA,null,'on-n');selA=null;}
+  if(selB){applyCardStyle(selB,null,'on-n');selB=null;}
+  document.querySelectorAll('.piece-card').forEach(c=>{
+    c.classList.remove('selected-a','selected-b','used');
+    c.querySelectorAll('.pm-cell').forEach(px=>{if(!px.classList.contains('off'))px.className='pm-cell on-n';});
+  });
+  setStatus('ピースAを選んでください','');
+}
+
+// ===== CONFETTI =====
+function confetti(){
+  const ov=document.getElementById('overlay');
+  const cols=['#f0e96a','#7ec850','#50c8c8','#e04080','#f09040','#a050f0'];
+  for(let i=0;i<52;i++){
+    const el=document.createElement('div');el.className='confetti';
+    el.style.cssText='left:'+Math.random()*100+'vw;top:-20px;background:'+cols[i%cols.length]+';width:'+(6+Math.random()*7)+'px;height:'+(6+Math.random()*7)+'px;animation-duration:'+(1.2+Math.random()*1.5)+'s;animation-delay:'+(Math.random()*.6)+'s';
+    ov.appendChild(el);setTimeout(()=>el.remove(),3500);
+  }
+}
+</script>
+</body>
+</html>
